@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[My Octopress Blog]]></title>
-  <link href="http://yoursite.com/atom.xml" rel="self"/>
-  <link href="http://yoursite.com/"/>
-  <updated>2016-07-09T18:10:49+08:00</updated>
-  <id>http://yoursite.com/</id>
+  <link href="http://danerduo87.github.io/atom.xml" rel="self"/>
+  <link href="http://danerduo87.github.io/"/>
+  <updated>2016-07-09T20:30:59+08:00</updated>
+  <id>http://danerduo87.github.io/</id>
   <author>
     <name><![CDATA[Wangsihao]]></name>
     
@@ -15,10 +15,10 @@
   
   <entry>
     <title type="html"><![CDATA[My First Post]]></title>
-    <link href="http://yoursite.com/blog/2016/07/09/my-first-post/"/>
+    <link href="http://danerduo87.github.io/blog/2016/07/09/my-first-post/"/>
     <updated>2016-07-09T18:10:14+08:00</updated>
-    <id>http://yoursite.com/blog/2016/07/09/my-first-post</id>
-    <content type="html"><![CDATA[
+    <id>http://danerduo87.github.io/blog/2016/07/09/my-first-post</id>
+    <content type="html"><![CDATA[<p>测试一下</p>
 ]]></content>
   </entry>
   

@@ -1,0 +1,67 @@
+---
+layout: post
+title: "角色被场景遮挡时的半透明显示"
+date: 2016-07-12 10:25:35 +0800
+comments: true
+categories:Unity
+---
+
+#### 角色被场景遮挡时的半透明显示
+
+摄像机跟随角色移动时，会遇到角色被场景中的物体遮挡的情况。通常的解决方案包括：
+
+1. 将摄像机移近, 直到角色不会被遮挡
+2. 将遮挡物体设为半透明 
+3. 分别绘制角色被遮挡的部分和未被遮挡的部分
+
+方案2的缺点在于场景模型是一个整体的时候无法使用，且需要每帧做ray-cast test
+
+主要说明一下方案3的实现：
+首先渲染场景
+然后分两个Pass渲染角色
+
+Pass0 : 渲染被遮挡的部分（greater z pass ）
+关闭Z-Write
+Z-Test设为Greater
+绘制想要的混合效果（alpha blend, add etc..），目前看来以光照信息的来做alpha混合的效果较好
+Pass1: 渲染未被遮挡的部分
+还原Z-Test设为LEqual
+还原Z-Write
+绘制角色
+
+方案3实际上在处理角色自身的submesh， 角色的装备等自身的遮挡时，会有显示问题（主要是渲染顺序导致的混合权重问题），通过仔细的调节alpha，可以将这个问题减到最小
+
+![](http://)
+
+```
+Shader "Custom/OculusedDiffuse" {
+	Properties {
+		_Color ("Main Color", Color) = (1,1,1,1)
+		_MainTex ("Base (RGB)", 2D) = "white" {}
+	}
+	SubShader {
+		Tags { "Queue" = "Geometry+300" "RenderType" = "Opaque" }
+		LOD 200
+		
+		Pass {
+			ZTest Greater
+			ZWrite Off
+			Lighting Off
+			Blend SrcAlpha OneMinusSrcAlpha
+			SetTexture[_MainTex]{ 
+				constantColor [_Color]
+				combine  texture * constant
+			}
+		}
+
+		Pass{
+			ZTest LEqual
+			ZWrite On
+			Lighting On
+			SetTexture[_MainTex]{ combine texture }
+		}
+
+	}
+	FallBack "Diffuse"
+}
+```

@@ -1,0 +1,193 @@
+---
+layout: post
+title: "3D换装"
+date: 2016-07-13 16:02:59 +0800
+comments: true
+categories: Unity
+---
+
+### 3D换装的实现
+
+RPG游戏中，拥有有大量的装备，同一个角色模型，可以穿戴各种不同的装备，根据实际需求的不同，换装通常有以下几种情况
+
+* 切换材质和贴图
+* 刚性，无形变等不需要蒙皮的物件
+* 包含蒙皮信息的物件
+
+##### 切换材质和贴图
+
+最简单的方案，对于不需要改变角色模型的情况适用
+
+##### 刚性，无形变等不需要蒙皮的物件，直接挂载到指定的骨骼
+
+不需要蒙皮的物件，例如刀，剑，护腕，护肩，帽子等只需要挂接到某一节点即可正确显示的，在装备的时候挂载上去，取下的时候删除掉即可。（当然需要美术事先调整好装备和挂接点，使得挂接后的效果正确）
+
+##### 包含蒙皮信息的物件，需要和角色使用同一套骨骼
+
+有些装备是无法直接挂接的，典型的例子：法师的长袍等柔性物体，如果不包含蒙皮信息，运动的时候就会穿帮。具体是怎么实现的呢，关键词就是：共享骨骼。美术在绑定骨骼的时候需要保证装备和模型使用同一套骨骼，接下来有两种方案：
+
+1. 角色和装备分开渲染，但使用角色的骨骼来驱动装备，TorchLight使用的是这种方式，使用unity来实现我还没有研究过
+
+2. 在制作角色时，将角色模型分块，即角色模型中同时包含角色和默认装备的模型，在换装时，将对应装备块的mesh更换成要换的装备模型， Unity的换装demo使用的是这种方式。
+
+	* 首先对于需要更换的部件，加载对应的模型，从其SkinnedMeshRenderer组件获取骨骼，材质，模型数据。
+	* 将获取的信息替换到角色身上即可
+	
+	如下代码是基于换装demo的资源实现的简易换装功能，target是需要换装的角色，该例中target仅仅包含骨架，所有的mesh都是动态创建后替换上去的，source包含完整的角色模型，骨骼，用作替换用的装备库。
+```
+    using UnityEngine;  
+    using System.Collections;  
+    using System.Collections.Generic;  
+
+    public class TestChar : MonoBehaviour {  
+
+        //来源模型资源的物件  
+        public Transform source;  
+
+        //目标物件  
+        public Transform target;  
+
+        //模型资源资料  
+        private Dictionary<string , Dictionary<string,Transform>> data = new Dictionary<string, Dictionary<string,Transform>>();  
+
+        //目标物件的骨架  
+        private Transform[] hips;  
+
+        //目标物件各部位的 SkinnedMeshRenderer 资料(参照)  
+        private Dictionary<string , SkinnedMeshRenderer> targetSmr = new Dictionary<string, SkinnedMeshRenderer>();  
+
+        void Start () {  
+            //从来源模型资源取出各部位的 SkinnedMeshRenderer  
+
+            SkinnedMeshRenderer[] parts = source.GetComponentsInChildren<SkinnedMeshRenderer>(true);  
+
+            foreach(SkinnedMeshRenderer part in parts){  
+
+                //利用 ? 字元分隔档名做为资料结构的 key，档名为 部位?编号 储存为 [部位][编号]=Transform资料  
+
+                string[] partName = part.name.Split('-');  
+
+                // 在 data 加入资料  
+
+                if(!data.ContainsKey(partName[0])){  
+
+                    data.Add(partName[0],new Dictionary<string,Transform>());  
+
+                    //建立新的 GameObject 并使用部位名称来命名，指定为目标物件的子物件  
+
+                    GameObject partObj = new GameObject();  
+
+                    partObj.name = partName[0];  
+
+                    partObj.transform.parent = target;  
+
+                    //为新建立的 GameObject 加入 SkinnedMeshRenderer，并将此 SkinnedMeshRenderer 存入 targetSmr  
+
+                    targetSmr.Add(partName[0] , partObj.AddComponent<SkinnedMeshRenderer>());  
+
+                }  
+
+                if (partName.Length == 2)
+                {
+                    data[partName[0]].Add(partName[1], part.transform);
+                }
+                else
+                {
+                    data[partName[0]].Add("1", part.transform);
+                }
+
+            }  
+
+            //从目标物件取得骨架资料 (Female_Hips 的全部物件)  
+
+            hips = target.GetComponentsInChildren<Transform>();  
+
+            /** 开始 重组模型 */  
+
+            foreach(KeyValuePair<string , Dictionary<string,Transform>> _part in data){  
+
+                switch(_part.Key){  
+
+                case "eyes":  
+
+                    ChangePart("eyes" , "1");  
+
+                    break;  
+
+                case "face":  
+
+                    ChangePart("face" , "1");  
+
+                    break;  
+
+                case "hair":  
+
+                    ChangePart("hair" , "1");  
+
+                    break;  
+
+                case "pants":  
+
+                    ChangePart("pants" , "1");  
+
+                    break;  
+
+                case "shoes":  
+
+                    ChangePart("shoes" , "1");  
+
+                    break;  
+
+                case "top":  
+
+                    ChangePart("top" , "1");  
+
+                    break;  
+
+                }  
+
+            }  
+
+            /** 重组模型 结束 */  
+
+            //指定播放走路动作  
+
+            //  target.animation.Play("walk");  
+
+        }  
+
+        private void ChangePart(string part , string item){  
+            //从资料中取得各部位指定编号的 SkinnedMeshRenderer  
+
+            SkinnedMeshRenderer smr = data[part][item].GetComponent<SkinnedMeshRenderer>();  
+
+            //取得相对应名称的骨架物件来建立新的骨架列表  
+
+            List<Transform> bones = new List<Transform>();  
+
+            foreach(Transform bone in smr.bones){  
+
+                foreach(Transform hip in hips){  
+
+                    if(hip.name != bone.name) continue;  
+
+                    bones.Add(hip);  
+
+                    break;  
+                }  
+            }  
+            // 更新指定部位 GameObject 的 SkinnedMeshRenderer 内容  
+
+            targetSmr[part].sharedMesh = smr.sharedMesh;  
+
+            targetSmr[part].bones = bones.ToArray();  
+
+            targetSmr[part].materials = smr.materials;  
+        }  
+
+        // Update is called once per frame  
+        void Update () {  
+
+        }  
+    }  
+```
